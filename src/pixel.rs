@@ -1,3 +1,19 @@
+macro_rules! generateAccessor {
+    ($name:path, $index:literal for $pixel:path) => {
+        impl std::ops::Index<$name> for $pixel {
+            type Output = u8;
+            fn index(&self, _: $name) -> &Self::Output {
+                &self.data()[$index]
+            }
+        }
+        impl std::ops::IndexMut<$name> for $pixel {
+            fn index_mut(&mut self, _: $name) -> &mut Self::Output {
+                &mut self.data_mut()[$index]
+            }
+        }
+    }
+}
+
 pub trait Pixel:
     std::fmt::Debug +
     std::default::Default +
@@ -44,19 +60,3 @@ generateAccessor!(Alpha, 0 for PixelXRGB);
 generateAccessor!(Red, 1 for PixelXRGB);
 generateAccessor!(Green, 2 for PixelXRGB);
 generateAccessor!(Blue, 3 for PixelXRGB);
-
-macro_rules! generateAccessor {
-    ($name:path, $index:literal for $pixel:path) => {
-        impl std::ops::Index<$name> for $pixel {
-            type Output = u8;
-            fn index(&self, _: $name) -> &Self::Output {
-                &self.data()[$index]
-            }
-        }
-        impl std::ops::IndexMut<$name> for $pixel {
-            fn index_mut(&mut self, _: $name) -> &mut Self::Output {
-                &mut self.data_mut()[$index]
-            }
-        }
-    }
-}

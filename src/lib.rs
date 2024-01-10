@@ -1,9 +1,10 @@
 mod pixel;
 mod buffer;
+mod util;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{pixel::*, buffer::*};
     #[test]
     fn simple_window() {        
         use xcb::{x::{self, Drawable, Window, Gcontext}, Connection};
@@ -70,8 +71,8 @@ mod tests {
                             format: x::ImageFormat::ZPixmap,
                             drawable: drawable_win,
                             gc: graphics,
-                            width: img.width as u16,
-                            height: img.height as u16,
+                            width: img.width() as u16,
+                            height: img.height() as u16,
                             dst_x: 0, dst_y: 0,
                             left_pad: 0,
                             depth: screen.root_depth(),
@@ -82,7 +83,7 @@ mod tests {
                 // if spacebar is pressed modify and redraw buffer
                 xcb::Event::X(x::Event::KeyPress(key)) => {
                     if key.detail() == 65 {
-                        if current_row >= img.height {
+                        if current_row >= img.height() {
                             mask = !mask;
                             current_row = 0;
                         }
@@ -102,8 +103,8 @@ mod tests {
                             format: x::ImageFormat::ZPixmap,
                             drawable: drawable_win,
                             gc: graphics,
-                            width: img.width as u16,
-                            height: img.height as u16,
+                            width: img.width() as u16,
+                            height: img.height() as u16,
                             dst_x: 0, dst_y: 0,
                             left_pad: 0,
                             depth: screen.root_depth(),

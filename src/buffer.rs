@@ -43,6 +43,12 @@ impl<T: Pixel> PixelBuffer<T> {
     pub fn row_mut(&mut self, index: usize) -> &mut [T] {
         &mut self[index]
     }
+    pub fn height(&self) -> usize {
+        self.height
+    }
+    pub fn width(&self) -> usize {
+        self.width
+    }
 }
 impl PixelBuffer<PixelBGRX> {
     pub fn as_bgrx_slice(&self) -> &[u8] {
