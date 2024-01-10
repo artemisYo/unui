@@ -1,10 +1,11 @@
+mod pixel;
+mod buffer;
+
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn simple_window() {
-        const IMG_HEIGHT: u16 = 150;
-        const IMG_WIDTH: u16 = 150;
-        
+    fn simple_window() {        
         use xcb::{x::{self, Drawable, Window, Gcontext}, Connection};
         // create connection
         let (connection, screen_num) = Connection::connect(None).unwrap();
@@ -18,10 +19,7 @@ mod tests {
         let graphics: Gcontext = connection.generate_id();
 
         // create buffer to be displayed
-        let mut img = std::iter::repeat(0u32)
-            .take((IMG_HEIGHT * IMG_WIDTH) as usize)
-            .flat_map(|i| i.to_be_bytes().into_iter())
-            .collect::<Vec<_>>();
+        let mut img = PixelBuffer::with_size(150, 150);
 
         // create window and check for errors
         // then also show the window
@@ -31,8 +29,8 @@ mod tests {
                 wid: window,
                 parent: screen.root(),
                 x: 0, y: 0,
-                width: IMG_WIDTH,
-                height: IMG_HEIGHT,
+                width: 150,
+                height: 150,
                 border_width: 0,
                 class: x::WindowClass::InputOutput,
                 visual: screen.root_visual(),
@@ -61,7 +59,9 @@ mod tests {
             match connection.wait_for_event().unwrap() {
                 // if window changed (size, visibility, etc)
                 // then show the buffer
-                xcb::Event::X(x::Event::Expose(_)) =>
+                xcb::Event::X(x::Event::Expose(e)) => {
+                    // adjust the size of the image to fit the entire buffer
+                    img = img.resize(e.width() as usize, e.height() as usize);
                     connection.check_request(
                         connection.send_request_checked(&x::PutImage {
                             // this format is the typical all colors at once format
@@ -70,26 +70,27 @@ mod tests {
                             format: x::ImageFormat::ZPixmap,
                             drawable: drawable_win,
                             gc: graphics,
-                            width: IMG_WIDTH, height: IMG_HEIGHT,
+                            width: img.width as u16,
+                            height: img.height as u16,
                             dst_x: 0, dst_y: 0,
                             left_pad: 0,
                             depth: screen.root_depth(),
-                            data: &img,
+                            data: img.as_bgrx_slice(),
                         })
-                    ).unwrap(),
+                    ).unwrap();
+                }
                 // if spacebar is pressed modify and redraw buffer
                 xcb::Event::X(x::Event::KeyPress(key)) => {
                     if key.detail() == 65 {
-                        if current_row >= IMG_HEIGHT as usize {
+                        if current_row >= img.height {
                             mask = !mask;
                             current_row = 0;
                         }
-                        let offset = 4 * current_row * IMG_WIDTH as usize;
-                        for i in 0..IMG_WIDTH as usize {
-                            img[i * 4 + offset] = 0xfdu8 & mask;
-                            img[i * 4 + offset + 1] = 0x87u8 & mask;
-                            img[i * 4 + offset + 2] = 0x72u8 & mask;
-                            img[i * 4 + offset + 3] = 0xffu8;
+                        let row = &mut img[current_row];
+                        for p in row.iter_mut() {
+                            p[Red] = 0x72 & mask;
+                            p[Green] = 0x87 & mask;
+                            p[Blue] = 0xfd & mask;
                         }
                         current_row += 1;
                     } else {
@@ -101,11 +102,12 @@ mod tests {
                             format: x::ImageFormat::ZPixmap,
                             drawable: drawable_win,
                             gc: graphics,
-                            width: IMG_WIDTH, height: IMG_HEIGHT,
+                            width: img.width as u16,
+                            height: img.height as u16,
                             dst_x: 0, dst_y: 0,
                             left_pad: 0,
                             depth: screen.root_depth(),
-                            data: &img,
+                            data: img.as_bgrx_slice(),
                         })
                     ).unwrap()
                 }
@@ -113,13 +115,5 @@ mod tests {
                 o => println!("{:?}", o),
             }
         }
-    }
-    #[test]
-    fn shm_window() {        
-        let (connection, _) = xcb::Connection::connect(None).unwrap();
-        let shm_ver = connection.wait_for_reply(
-            connection.send_request(&xcb::shm::QueryVersion {})
-        ).unwrap();
-        dbg!(shm_ver); // prints no support for shared pixmaps on my system
     }
 }
