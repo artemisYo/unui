@@ -64,12 +64,18 @@ pub enum MMapError {
     FsError,
     PermError,
 }
+// needs to be a borrow, such that rust's allocator
+// does not spring into action and tries to deallocate it
+pub struct MMapSegment(&'static mut [u8]);
+impl Drop for MMapSegment {
+    fn drop(&mut self) {
+        let ptr = self.0.as_mut_ptr() as *mut libc::c_void;
+        unsafe { libc::munmap(ptr, self.0.len()) };
+    }
+}
 // while we do take a &mut here, the lifetime of the fd doesn't matter
 // as on linux the mmaped region is fine even if the fd is closed
-// TODO: the resulting Box<[u8]> is the *void mmap usually returns
-//   however dropping it rn does not deallocate using munmap, rather
-//   it goes to the rust allocator, which is BAD
-pub fn map_file(file: &mut OwnedFd, size: usize) -> Result<Box<[u8]>, MMapError> {
+pub fn map_file(file: &mut OwnedFd, size: usize) -> Result<MMapSegment, MMapError> {
     use std::os::fd::AsRawFd;
     type VoidPtr = *mut libc::c_void;
     const PROT: i32 = libc::PROT_READ | libc::PROT_WRITE;
@@ -99,5 +105,5 @@ pub fn map_file(file: &mut OwnedFd, size: usize) -> Result<Box<[u8]>, MMapError>
             _ => unreachable!(),
         }
     }
-    Ok(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(addr as *mut u8, size)) })
+    Ok(MMapSegment(unsafe { std::slice::from_raw_parts_mut(addr as *mut u8, size) }))
 }
