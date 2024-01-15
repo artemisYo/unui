@@ -1,76 +1,33 @@
-use std::default::Default;
-use crate::pixel::{Pixel, PixelBGRX};
-
+mod xbuffer;
+pub use xbuffer::*;
 // TODO: Also handle allocating a PixelBuffer in a shm for
 //       Wayland rendering; (iffy) required libc functions:
 //                          memfd_create, ftruncate, mmap
+//       The problem of resizes arises in shm memory:
+//         If the Vec needs to be resized, we need to first
+//         check if the given shm_pool can accommodate it, otherwise
+//         resize the underlying fd to accommodate it as well as the
+//         pool itself, then the wl_buffer needs to be destroyed and
+//         a new one with the correct size created and only then can
+//         the extra memory be used as expected.
+//       -> Vec most likely unusable
 
-/// A simple wrapper around a Vec, indexing returns a row as a slice.
-#[derive(Default, Debug)]
-pub struct PixelBuffer<Format: Pixel> {
-    backing: Vec<Format>,
-    height: usize,
-    width: usize,
+pub trait Pixel {
+	fn set_red(&mut self, _: u8);
+	fn set_green(&mut self, _: u8);
+	fn set_blue(&mut self, _: u8);
+	fn set_alpha(&mut self, _: u8);
 }
-impl<T: Pixel> PixelBuffer<T> {
-    /// Initializes a PixelBuffer with size 0x0
-    pub fn new() -> Self { Default::default() }
+
+pub trait PixelBuffer<T: Pixel>
+    : std::ops::Index<usize, Output = [T]>
+    + std::ops::IndexMut<usize>
+{
     /// Initializes a PixelBuffer with the given size, contents are zeroed
-    pub fn with_size(width: usize, height: usize) -> Self {
-        Self {
-            backing: vec![Default::default(); width * height],
-            height,
-            width
-        }
-    }
+	fn with_size(width: usize, height: usize) -> Self;
     /// Resize the PixelBuffer to the given dimensions, invalidating
     /// any content.
-    pub fn resize(mut self, new_width: usize, new_height: usize) -> Self {
-        self.backing.resize(new_width * new_height, Default::default());
-        self.height = new_height;
-        self.width = new_width;
-        self
-    }
-    pub fn as_slice(&self) -> &[T] {
-        self.backing.as_slice()
-    }
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        self.backing.as_mut_slice()
-    }
-    pub fn row(&self, index: usize) -> &[T] {
-        &self[index]
-    }
-    pub fn row_mut(&mut self, index: usize) -> &mut [T] {
-        &mut self[index]
-    }
-    pub fn height(&self) -> usize {
-        self.height
-    }
-    pub fn width(&self) -> usize {
-        self.width
-    }
-}
-impl PixelBuffer<PixelBGRX> {
-    pub fn as_bgrx_slice(&self) -> &[u8] {
-        // this is fine as every pixel is already just a [u8;4]
-        // if there is unexpected padding, this is bad;
-        // however, that should not occur
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_slice().as_ptr() as *const u8,
-                self.backing.len() * 4,
-            )
-        }
-    }
-}
-impl<T: Pixel> std::ops::Index<usize> for PixelBuffer<T> {
-    type Output = [T];
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.backing[self.width * index..][..self.width]
-    }
-}
-impl<T: Pixel> std::ops::IndexMut<usize> for PixelBuffer<T> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.backing[self.width * index..][..self.width]
-    }
+	fn resize(self, new_width: usize, new_height: usize) -> Self;
+	fn height(&self) -> usize;
+	fn width(&self) -> usize;
 }

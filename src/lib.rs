@@ -20,7 +20,7 @@ mod tests {
         let graphics: Gcontext = connection.generate_id();
 
         // create buffer to be displayed
-        let mut img = PixelBuffer::with_size(150, 150);
+        let mut img = XBuffer::with_size(150, 150);
 
         // create window and check for errors
         // then also show the window
