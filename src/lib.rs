@@ -1,10 +1,8 @@
-mod pixel;
 mod buffer;
-mod util;
 
 #[cfg(test)]
 mod tests {
-    use super::{pixel::*, buffer::*};
+    use super::buffer::*;
     #[test]
     fn simple_window() {        
         use xcb::{x::{self, Drawable, Window, Gcontext}, Connection};
@@ -76,7 +74,7 @@ mod tests {
                             dst_x: 0, dst_y: 0,
                             left_pad: 0,
                             depth: screen.root_depth(),
-                            data: img.as_bgrx_slice(),
+                            data: img.as_slice(),
                         })
                     ).unwrap();
                 }
@@ -89,9 +87,9 @@ mod tests {
                         }
                         let row = &mut img[current_row];
                         for p in row.iter_mut() {
-                            p[Red] = 0x72 & mask;
-                            p[Green] = 0x87 & mask;
-                            p[Blue] = 0xfd & mask;
+                            p.set_red(0x72 & mask);
+                            p.set_green(0x87 & mask);
+                            p.set_blue(0xfd & mask);
                         }
                         current_row += 1;
                     } else {
@@ -108,7 +106,7 @@ mod tests {
                             dst_x: 0, dst_y: 0,
                             left_pad: 0,
                             depth: screen.root_depth(),
-                            data: img.as_bgrx_slice(),
+                            data: img.as_slice(),
                         })
                     ).unwrap()
                 }

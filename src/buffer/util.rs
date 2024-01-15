@@ -1,6 +1,7 @@
 use libc;
 use std::os::fd::OwnedFd;
 
+#[derive(Debug)]
 pub enum MemFdError {
     NameError,
     ArgumentError,
@@ -28,6 +29,7 @@ pub fn create_temp_file(name: Option<&str>) -> Result<OwnedFd, MemFdError> {
     Ok(unsafe { OwnedFd::from_raw_fd(raw_fd) })
 }
 
+#[derive(Debug)]
 pub enum FTruncError {
     Interrupted,
     LengthError,
@@ -55,6 +57,7 @@ pub fn truncate_file(file: &mut OwnedFd, length: i64) -> Result<(), FTruncError>
     Ok(())
 }
 
+#[derive(Debug)]
 pub enum MMapError {
     ProtectionError,
     LimitError,

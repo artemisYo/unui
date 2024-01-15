@@ -43,7 +43,7 @@ impl XBuffer {
         // however, that should not occur
         unsafe {
             std::slice::from_raw_parts(
-                self.as_slice().as_ptr() as *const u8,
+                self.backing.as_slice().as_ptr() as *const u8,
                 self.backing.len() * 4,
             )
         }

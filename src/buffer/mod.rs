@@ -1,4 +1,6 @@
 mod xbuffer;
+mod wbuffer;
+mod util;
 pub use xbuffer::*;
 // TODO: Also handle allocating a PixelBuffer in a shm for
 //       Wayland rendering; (iffy) required libc functions:
